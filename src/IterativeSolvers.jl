@@ -14,5 +14,6 @@ include("lanczos.jl")
 
 #Least-squares
 include("lsqr.jl")
+include("lsqr_shared.jl")
 
 end

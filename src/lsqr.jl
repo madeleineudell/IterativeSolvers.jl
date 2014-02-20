@@ -39,8 +39,10 @@ export lsqr, lsqr!
 # Adapted for Julia by Timothy E. Holy with the following changes:
 #    - Allow an initial guess for x
 #    - Eliminate printing
+# Adapted by Madeleine Udell with the following changes:
+#    - allow user to input temporary variables u,v,tmpm,tmpn
 #-----------------------------------------------------------------------
-function lsqr!(x, ch::ConvergenceHistory, A, b; damp=0, atol=sqrt(eps(Adivtype(A,b))), btol=sqrt(eps(Adivtype(A,b))), conlim=one(Adivtype(A,b))/sqrt(eps(Adivtype(A,b))), maxiter::Int=max(size(A,1), size(A,2)))
+function lsqr!(x, ch::ConvergenceHistory, A, b; temp_vars=nothing, damp=0, atol=sqrt(eps(Adivtype(A,b))), btol=sqrt(eps(Adivtype(A,b))), conlim=one(Adivtype(A,b))/sqrt(eps(Adivtype(A,b))), maxiter::Int=max(size(A,1), size(A,2)))
     # Sanity-checking
     m = size(A,1)
     n = size(A,2)
@@ -59,13 +61,21 @@ function lsqr!(x, ch::ConvergenceHistory, A, b; damp=0, atol=sqrt(eps(Adivtype(A
     Anorm = Acond = ddnorm = res2 = xnorm = xxnorm = z = sn2 = zero(T)
     cs2 = -one(T)
     dampsq = damp*damp
-    tmpm = Array(T, m)
-    tmpn = Array(T, n)
+    if temp_vars==nothing
+        u = Array(T,m)
+        v = zeros(T,n)
+        tmpm = Array(T, m)
+        tmpn = Array(T, n)
+    else
+        u,v,tmpm,tmpn = temp_vars
+        v[:] = zeros(T,n)
+    end
 
     # Set up the first vectors u and v for the bidiagonalization.
     # These satisfy  beta*u = b-A*x,  alpha*v = A'u.
-    u = b-A*x
-    v = zeros(T, n)
+    u[:] = b
+    # u -= A*x, so now u = b-A*x
+    A_mul_B!(-one(T), A, x, one(T), u)
     beta = norm(u)
     alpha = zero(T)
     if beta > 0
